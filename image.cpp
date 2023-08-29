@@ -49,22 +49,71 @@ void draw_rectangle(std::vector<uint32_t> &img, const size_t img_w, const size_t
         for (size_t j=0; j<h; j++) {
             size_t cx = x+i;
             size_t cy = y+j;
-            assert(cx<img_w && cy<img_h);
+            if (cx>=img_w || cy>=img_h) continue;
             img[cx + cy*img_w] = color;
         }
     }
 }
 
 int main() {
-    const size_t win_w = 512;
+    const size_t win_w = 1024;
     const size_t win_h = 512;
-    std::vector<uint32_t> framebuffer(win_w*win_h, 255);
-    for (size_t j = 0; j<win_h; j++) {
-        for (size_t i = 0; i<win_w; i++) {
-            uint8_t r = 255*j/float(win_h);
-            uint8_t g = 255*i/float(win_w);
-            uint8_t b = 255;
-            framebuffer[i+j*win_w] = pack_color(r, g, b);
+    std::vector<uint32_t> framebuffer(win_w*win_h, pack_color(255, 255, 255));
+    
+    const size_t map_w = 16; // map width
+    const size_t map_h = 16; // map height
+
+    //map layout is temporary, want to strengthen my undersatnding of the original code first
+    const char map[] = "0000000000000000"\
+                       "1              0"\
+                       "1      11111   0"\
+                       "1     0        0"\
+                       "0     0  1110000"\
+                       "0     3        0"\
+                       "0   10000      0"\
+                       "0   0   11100  0"\
+                       "0   0   0      0"\
+                       "0   0   1  00000"\
+                       "0       1      0"\
+                       "2       1      0"\
+                       "0       0      0"\
+                       "0 0000000      0"\
+                       "0              0"\
+                       "0002222222200000"; 
+    assert(sizeof(map) == map_w*map_h+1); 
+
+
+    //PLAYER CODE
+    float xplayer = 4.0;
+    float yplayer = 4.0;
+    float aplayer = 1.3;
+    const float fov = M_PI/3.;
+
+    const size_t rect_w = win_w/(map_w*2);
+    const size_t rect_h = win_h/map_h;
+    for (size_t j=0; j<map_h; j++) {
+        for (size_t i=0; i<map_w; i++) {
+            if (map[i+j*map_w]==' ') continue; 
+            size_t rect_x = i*rect_w;
+            size_t rect_y = j*rect_h;
+            draw_rectangle(framebuffer, win_w, win_h, rect_x, rect_y, rect_w, rect_h, pack_color(0, 0, 0));
+        }
+    }
+
+    for(size_t i=0; i<win_w/2; i++) {
+        float angle = aplayer-fov/2 + fov*i/float(win_w/2);
+        for (float t=0; t<20; t+=.05) {
+            float cx = xplayer + t*cos(angle);
+            float cy = yplayer + t*sin(angle);
+
+            size_t pix_x = cx*rect_w;
+            size_t pix_y = cy*rect_h;
+            framebuffer[pix_x + pix_y*win_w] = pack_color(160, 160, 160);
+            if (map[int(cx)+int(cy)*map_w]!=' ') {
+                size_t wall_h = win_h/t;
+                draw_rectangle(framebuffer, win_w, win_h, win_w/2+i, win_h/2-wall_h/2, 1, wall_h, pack_color(0, 255, 255));
+                break;
+            }
         }
     }
 
